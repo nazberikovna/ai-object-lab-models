@@ -1,0 +1,185 @@
+{
+  "schema_version": "1.0",
+  "catalog_id": "ai-object-lab-models",
+  "updated_at": "2026-09-14",
+  "base_url": "https://raw.githubusercontent.com/nazberikovna/ai-object-lab-models/main/",
+  "models": [
+    {
+      "id": "four-cylinder-engine-scan",
+      "titles": {
+        "ru": "Блок четырёхцилиндрового двигателя — реалистичный 3D-скан",
+        "kk": "Төрт цилиндрлі қозғалтқыш блогы — шынайы 3D-скан",
+        "en": "Four-cylinder engine block — realistic 3D scan"
+      },
+      "aliases": [
+        "блок четырехцилиндрового двигателя",
+        "блок четырёхцилиндрового двигателя",
+        "блок цилиндров",
+        "цилиндрлер блогы",
+        "төрт цилиндрлі қозғалтқыш блогы",
+        "four-cylinder engine block",
+        "cylinder block"
+      ],
+      "file": "models/engine/four-cylinder-engine-scan.glb",
+      "format": "glb",
+      "bytes": 7000616,
+      "presentation": "realistic-scan",
+      "capabilities": {
+        "rotate": true,
+        "zoom": true,
+        "selectable_parts": false,
+        "explode": false,
+        "embedded_animation": false,
+        "cutaway": true
+      },
+      "best_for": [
+        "realistic external and internal inspection",
+        "component recognition",
+        "geometry observation"
+      ],
+      "not_for": [
+        "animated four-stroke cycle",
+        "exact measurement",
+        "repair or manufacturing guidance"
+      ],
+      "accuracy_note": {
+        "ru": "Реальный 3D-скан блока цилиндров, оптимизированный для браузера. Это не собранный двигатель и не анимация четырёх тактов.",
+        "kk": "Браузер үшін оңтайландырылған цилиндрлер блогының нақты 3D-сканы. Бұл жиналған қозғалтқыш немесе төрт тактілі анимация емес.",
+        "en": "A real cylinder-block scan optimized for the browser. It is not a complete engine or an animated four-stroke model."
+      },
+      "provenance": {
+        "title": "Four-cylinder engine",
+        "author": "Artec 3D",
+        "source_url": "https://www.artec3d.com/3d-models/four-cylinder-engine",
+        "license": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "modifications": "Original PLY scan decimated to 350,000 faces, centered, normalized, assigned a neutral material, and converted to GLB."
+      }
+    },
+    {
+      "id": "asus-b550f-motherboard",
+      "titles": {
+        "ru": "Материнская плата ASUS ROG Strix B550-F",
+        "kk": "ASUS ROG Strix B550-F аналық платасы",
+        "en": "ASUS ROG Strix B550-F motherboard"
+      },
+      "aliases": [
+        "материнская плата",
+        "материнская плата atx",
+        "asus b550f",
+        "asus rog strix b550-f",
+        "аналық плата",
+        "atx аналық платасы",
+        "motherboard",
+        "atx motherboard"
+      ],
+      "file": "models/motherboard/asus-b550f-motherboard.glb",
+      "format": "glb",
+      "bytes": 8073496,
+      "presentation": "detailed-product-model",
+      "decoder": "meshopt",
+      "capabilities": {
+        "rotate": true,
+        "zoom": true,
+        "selectable_parts": true,
+        "explode": "limited-by-mesh-groups",
+        "embedded_animation": false,
+        "cutaway": false
+      },
+      "best_for": [
+        "recognizing motherboard components",
+        "port and connector orientation",
+        "form-factor overview"
+      ],
+      "not_for": [
+        "electrical diagnosis",
+        "exact circuit tracing",
+        "repair or measurement"
+      ],
+      "part_name_map": {
+        "VRM_Heatsinktop": {"ru": "Радиатор VRM", "kk": "VRM радиаторы", "en": "VRM heatsink"},
+        "IO_Heatsink_botton": {"ru": "Кожух задней панели", "kk": "Артқы панель қаптамасы", "en": "Rear I/O shroud"},
+        "Chiipset": {"ru": "Чипсет", "kk": "Чипсет", "en": "Chipset"},
+        "ROG_Cmos": {"ru": "Батарея CMOS", "kk": "CMOS батареясы", "en": "CMOS battery"},
+        "IO_Metal.001": {"ru": "Разъёмы задней панели", "kk": "Артқы панель қосқыштары", "en": "Rear I/O connectors"},
+        "Board": {"ru": "Печатная плата", "kk": "Баспа тақшасы", "en": "Printed circuit board"},
+        "GreyCapactiro": {"ru": "Конденсаторы", "kk": "Конденсаторлар", "en": "Capacitors"},
+        "Audio_Capactiro_side": {"ru": "Аудиотракт", "kk": "Аудио тракт", "en": "Audio section"},
+        "GoldWifi": {"ru": "Антенные разъёмы Wi-Fi", "kk": "Wi-Fi антенна қосқыштары", "en": "Wi-Fi antenna connectors"}
+      },
+      "accuracy_note": {
+        "ru": "Детализированная модель конкретной платы для изучения компоновки. Не использовать как электрическую схему.",
+        "kk": "Нақты платаның орналасуын зерттеуге арналған егжей-тегжейлі модель. Электр сызбасы ретінде қолданбаңыз.",
+        "en": "A detailed product model for studying layout. Do not use it as an electrical schematic."
+      },
+      "provenance": {
+        "title": "Asus Strix B-550-F Gaming Motherboard Realistic",
+        "author": "MUSHROOM_BUILDS",
+        "source_url": "https://sketchfab.com/3d-models/asus-strix-b-550-f-gaming-motherboard-realistic-3eba5f45bed74fbeb2647de38047000f",
+        "redistribution_source": "https://github.com/Jacob-Baker-Git/CustomPc/blob/main/public/models/README.md",
+        "license": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "modifications": "Filename normalized for the AI Object Lab catalog; geometry and textures unchanged."
+      }
+    },
+    {
+      "id": "disc-brake-educational",
+      "titles": {
+        "ru": "Дисковый тормоз — учебная модель",
+        "kk": "Дискілі тежегіш — оқу моделі",
+        "en": "Disc brake — educational model"
+      },
+      "aliases": [
+        "дисковый тормоз",
+        "тормозной диск",
+        "тормозной суппорт",
+        "дискілі тежегіш",
+        "тежегіш дискісі",
+        "disc brake",
+        "brake rotor",
+        "brake caliper"
+      ],
+      "file": "models/brake/disc-brake-educational.glb",
+      "format": "glb",
+      "bytes": 167428,
+      "presentation": "detailed-educational-model",
+      "capabilities": {
+        "rotate": true,
+        "zoom": true,
+        "selectable_parts": true,
+        "explode": true,
+        "embedded_animation": false,
+        "cutaway": true
+      },
+      "best_for": [
+        "disc-brake assembly overview",
+        "friction principle explanation",
+        "exploded-view component identification"
+      ],
+      "not_for": [
+        "exact dimensions or tolerances",
+        "vehicle-specific service procedure",
+        "safety inspection"
+      ],
+      "node_groups": {
+        "rotor": ["rotor_", "vent_vane_"],
+        "hub": ["hub_bell", "axle_opening", "wheel_stud_", "lug_recess_"],
+        "caliper": ["caliper_body", "guide_pin_", "hydraulic_piston_", "brake_hose_"],
+        "pads": ["outer_pad_", "inner_pad_"]
+      },
+      "accuracy_note": {
+        "ru": "Детализированная обобщённая учебная модель; не соответствует конкретному автомобилю.",
+        "kk": "Егжей-тегжейлі жалпы оқу моделі; нақты автомобильге сәйкес келмейді.",
+        "en": "A detailed generic teaching model; it does not represent a specific vehicle."
+      },
+      "provenance": {
+        "title": "Disc brake educational model",
+        "author": "AI Object Lab project",
+        "source_url": "https://github.com/nazberikovna/ai-object-lab-models",
+        "license": "CC0 1.0",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "modifications": "Generated parametrically from original project code."
+      }
+    }
+  ]
+}
