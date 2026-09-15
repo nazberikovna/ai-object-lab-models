@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Object Lab — библиотека 3D-моделей</title>
+  <style>
+    :root { color-scheme: dark; --bg:#101720; --panel:#1b2632; --line:#354555; --text:#edf4f9; --muted:#b5c2ce; --gold:#f6c367; --red:#ff9a91; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:radial-gradient(circle at 55% -20%,#344658 0,var(--bg) 58%); color:var(--text); font:15px/1.45 system-ui,-apple-system,sans-serif; }
+    main { width:min(1180px,100%); margin:auto; padding:18px; }
+    h1 { margin:0; font-size:clamp(23px,4vw,35px); }
+    p { margin:7px 0; }
+    .muted { color:var(--muted); }
+    .top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
+    .search { display:flex; gap:8px; flex:1 1 340px; max-width:520px; }
+    input,button { font:inherit; border-radius:10px; border:1px solid var(--line); padding:10px 12px; }
+    input { min-width:0; flex:1; background:#131e28; color:var(--text); }
+    button { background:#2c3a48; color:var(--text); cursor:pointer; }
+    button:hover:not(:disabled) { border-color:var(--gold); }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .stage { position:relative; height:min(66vh,710px); min-height:380px; margin-top:15px; border:1px solid var(--line); border-radius:18px; overflow:hidden; background:linear-gradient(#202d3b,#141d27); box-shadow:0 24px 65px #0008; }
+    canvas { display:block; width:100%; height:100%; touch-action:none; cursor:grab; }
+    canvas:active { cursor:grabbing; }
+    .status { position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:24px; background:#17222bd9; }
+    .status[hidden] { display:none; }
+    .status.error { color:var(--red); }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:13px; margin:10px 0; }
+    .card a { color:#9ed1ff; }
+    details summary { cursor:pointer; font-weight:600; }
+    .suggestions { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:12px; }
+    .readout { overflow-wrap:anywhere; }
+    @media(max-width:600px) { main{padding:10px} .stage{height:58vh;min-height:340px} .search{max-width:none} }
+  </style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div><h1>AI Object Lab</h1><p class="muted">Готовые учебные 3D-модели из открытой библиотеки</p></div>
+    <form class="search" id="searchForm"><input id="searchInput" type="search" aria-label="Название объекта" placeholder="Например, дисковый тормоз" autocomplete="off"><button type="submit">Показать</button></form>
+  </div>
+  <section class="stage" aria-label="Интерактивная 3D-модель">
+    <canvas id="view" aria-label="Вращайте модель мышью или пальцем"></canvas>
+    <div class="status" id="status" role="status">Выберите объект из каталога.</div>
+  </section>
+  <div class="actions">
+    <button id="explode" type="button" hidden>Разобрать</button>
+    <button id="reset" type="button" disabled>Исходный вид</button>
+    <button id="retry" type="button" hidden>Повторить загрузку</button>
+  </div>
+  <section class="card"><strong id="partName">Выберите объект</strong><p class="muted" id="partDescription">Вращайте, масштабируйте и нажимайте на детали модели.</p><p id="accuracy" class="muted"></p></section>
+  <details class="card" id="credits" hidden open><summary>Источник модели и лицензия</summary><div id="creditsBody"></div></details>
+</main>
+<script type="module">
+  import * as THREE from 'https://esm.sh/three@0.179.1';
+  import { OrbitControls } from 'https://esm.sh/three@0.179.1/examples/jsm/controls/OrbitControls.js';
+  import { GLTFLoader } from 'https://esm.sh/three@0.179.1/examples/jsm/loaders/GLTFLoader.js';
+  import { MeshoptDecoder } from 'https://esm.sh/three@0.179.1/examples/jsm/libs/meshopt_decoder.module.js';
+
+  const catalogURL = new URL('../catalog/catalog.json', location.href);
+  const elements = Object.fromEntries(['view','status','searchForm','searchInput','explode','reset','retry','partName','partDescription','accuracy','credits','creditsBody'].map(id => [id, document.getElementById(id)]));
+  const renderer = new THREE.WebGLRenderer({canvas:elements.view,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.shadowMap.enabled=true;
+  const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(42,1,.01,150);
+  const controls=new OrbitControls(camera,elements.view);
+  controls.enableDamping=true;
+  controls.minDistance=2;
+  controls.maxDistance=24;
+  scene.add(new THREE.HemisphereLight(0xdce9f5,0x1b222b,2));
+  const key=new THREE.DirectionalLight(0xfff4e4,3.5);
+  key.position.set(5,8,7);scene.add(key);
+  const rim=new THREE.DirectionalLight(0xaed6ff,1.8);
+  rim.position.set(-5,4,-6);scene.add(rim);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(30,30),new THREE.ShadowMaterial({opacity:.18}));
+  floor.rotation.x=-Math.PI/2;scene.add(floor);
+
+  let catalog=null, current=null, model=null, initialCamera=null, selected=null, exploded=false, generation=0;
+  const meshes=[], assemblies=[];
+  const normalize=value=>String(value||'').normalize('NFKC').toLocaleLowerCase().replace(/ё/g,'е').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+  const namesFor=entry=>[entry.id,...Object.values(entry.titles||{}),...(entry.aliases||[])];
+  function matchModel(query,entries){
+    const q=normalize(query);
+    if(!q)return null;
+    const scored=entries.map(entry=>{
+      const names=namesFor(entry).map(normalize);
+      const exact=names.some(name=>name===q);
+      const partial=names.some(name=>name.length>2&&(q.includes(name)||name.includes(q)));
+      return {entry,score:exact?2:partial?1:0};
+    }).filter(item=>item.score).sort((a,b)=>b.score-a.score);
+    return scored[0]?.entry||null;
+  }
+  function label(text, error=false){elements.status.hidden=false;elements.status.textContent=text;elements.status.classList.toggle('error',error);}
+  function suggestions(entries){
+    elements.status.textContent='Модель с таким названием пока не добавлена. Выберите доступную:';
+    const row=document.createElement('div');row.className='suggestions';
+    for(const entry of entries){const button=document.createElement('button');button.type='button';button.textContent=entry.titles?.ru||entry.id;button.onclick=()=>choose(button.textContent);row.appendChild(button);}
+    elements.status.append(row);elements.status.hidden=false;
+  }
+  async function getCatalog(){
+    if(catalog)return catalog;
+    const response=await fetch(catalogURL,{cache:'no-cache'});
+    if(!response.ok)throw new Error(`Каталог: HTTP ${response.status}`);
+    const data=await response.json();
+    if(!Array.isArray(data.models))throw new Error('Некорректный каталог моделей');
+    catalog=data;return data;
+  }
+  function modelURL(entry){
+    if(!/^models\/[\w.-]+\/[\w.-]+\.glb$/.test(entry.file))throw new Error('Некорректный путь модели в каталоге');
+    return new URL('../'+entry.file,location.href);
+  }
+  function disposePrevious(){
+    if(model){scene.remove(model);model.traverse(node=>{if(node.isMesh){node.geometry?.dispose();for(const material of [].concat(node.material||[]))material.dispose?.();}});model=null;}
+    meshes.length=0;assemblies.length=0;selected=null;exploded=false;elements.explode.textContent='Разобрать';
+    elements.partName.textContent='Выберите деталь';elements.partDescription.textContent='Нажмите на часть модели.';
+  }
+  function assemblyName(node,entry){
+    const key=(node.name||node.material?.name||'').toLowerCase();
+    if(entry.node_groups){for(const [name,prefixes] of Object.entries(entry.node_groups))if(prefixes.some(prefix=>key.includes(prefix)))return name;}
+    if(entry.part_name_map){for(const [name,names] of Object.entries(entry.part_name_map))if(key.includes(name.toLowerCase()))return names.ru||name;}
+    return node.name||node.material?.name||entry.titles?.ru||entry.id;
+  }
+  function installModel(root,entry,token){
+    if(token!==generation){root.traverse(node=>node.geometry?.dispose?.());return;}
+    disposePrevious();
+    const box=new THREE.Box3().setFromObject(root),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+    if(!Number.isFinite(size.length())||size.length()===0)throw new Error('Пустая 3D-модель');
+    root.position.sub(center);root.scale.setScalar(5/Math.max(size.x,size.y,size.z));
+    scene.add(root);model=root;
+    root.traverse(node=>{if(!node.isMesh)return;node.castShadow=node.receiveShadow=true;meshes.push(node);
+      const name=assemblyName(node,entry);node.userData.studyName=name;
+      const found=assemblies.find(item=>item.name===name);
+      if(found)found.nodes.push(node);else assemblies.push({name,nodes:[node]});
+    });
+    const bounds=new THREE.Box3().setFromObject(root);
+    floor.position.y=bounds.min.y-.13;
+    camera.position.set(6,4.5,8);controls.target.set(0,0,0);controls.update();initialCamera=camera.position.clone();
+    elements.reset.disabled=false;
+    const canExplode=entry.capabilities?.explode===true||entry.capabilities?.explode==='limited-by-mesh-groups';
+    elements.explode.hidden=!canExplode||assemblies.length<2;
+    elements.status.hidden=true;
+  }
+  function credits(entry){
+    const prov=entry.provenance||{};
+    elements.creditsBody.replaceChildren();
+    const title=document.createElement('p');title.textContent=`${entry.titles?.ru||entry.id} · ${prov.author||'Автор не указан'} · ${prov.license||'Лицензия не указана'}`;elements.creditsBody.append(title);
+    if(prov.source_url){const link=document.createElement('a');link.href=prov.source_url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Оригинал и автор';elements.creditsBody.append(link);}
+    if(prov.modifications){const changes=document.createElement('p');changes.className='muted';changes.textContent=`Изменения: ${prov.modifications}`;elements.creditsBody.append(changes);}
+    elements.credits.hidden=false;
+    elements.accuracy.textContent=entry.accuracy_note?.ru||'Учебная модель: внешний вид не подтверждает инженерную точность.';
+  }
+  async function choose(query){
+    const token=++generation;
+    const clean=query.trim();elements.searchInput.value=clean;
+    const page=new URL(location.href);if(clean)page.searchParams.set('q',clean);else page.searchParams.delete('q');history.replaceState(null,'',page);
+    elements.retry.hidden=true;label('Ищу объект в открытом каталоге…');
+    try{
+      const entries=(await getCatalog()).models;if(token!==generation)return;
+      const entry=matchModel(clean,entries);
+      if(!entry){disposePrevious();elements.credits.hidden=true;elements.accuracy.textContent='';suggestions(entries);return;}
+      current=entry;credits(entry);label(`Загружаю готовую модель: ${entry.titles?.ru||entry.id}…`);
+      const url=modelURL(entry);
+      const loader=new GLTFLoader();loader.setMeshoptDecoder(MeshoptDecoder);
+      loader.load(url.href,gltf=>{try{installModel(gltf.scene,entry,token);}catch(error){label(`Не удалось открыть модель: ${error.message}`,true);elements.retry.hidden=false;}},undefined,error=>{
+        if(token!==generation)return;label(`Модель недоступна по адресу ${url.href}. Проверьте интернет и повторите попытку.`,true);elements.retry.hidden=false;console.error(error);
+      });
+    }catch(error){if(token!==generation)return;label(`Не удалось открыть публичный каталог: ${error.message}. Проверьте интернет или попробуйте открыть страницу в обычном браузере.`,true);elements.retry.hidden=false;}
+  }
+  const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null;
+  elements.view.addEventListener('pointerdown',event=>down=[event.clientX,event.clientY]);
+  elements.view.addEventListener('pointerup',event=>{
+    if(!model||!down||Math.hypot(event.clientX-down[0],event.clientY-down[1])>7)return;
+    const rect=elements.view.getBoundingClientRect();pointer.set((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);
+    raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects(meshes,false)[0]?.object;
+    if(!hit)return;
+    if(selected?.material?.emissive)selected.material.emissive.setHex(selected.userData.savedEmissive);
+    selected=hit;if(hit.material?.emissive){hit.userData.savedEmissive=hit.material.emissive.getHex();hit.material.emissive.setHex(0x694700);}
+    elements.partName.textContent=hit.userData.studyName;
+    elements.partDescription.textContent=current?.capabilities?.selectable_parts?'Это часть готовой модели; изучайте её положение относительно остальных узлов.':'Модель цельная: отдельные внутренние детали здесь не выделены.';
+  });
+  elements.explode.onclick=()=>{
+    if(!model)return;exploded=!exploded;elements.explode.textContent=exploded?'Собрать':'Разобрать';
+    for(const item of assemblies){const direction=new THREE.Vector3();
+      const box=new THREE.Box3();for(const node of item.nodes)box.expandByObject(node);
+      box.getCenter(direction);if(direction.length()<.1)direction.set(1,0,0);direction.normalize().multiplyScalar(exploded?.36:0);
+      for(const node of item.nodes){if(!node.userData.basePosition)node.userData.basePosition=node.position.clone();node.position.copy(node.userData.basePosition).add(direction);}
+    }
+  };
+  elements.reset.onclick=()=>{if(initialCamera)camera.position.copy(initialCamera);controls.target.set(0,0,0);controls.update();};
+  elements.retry.onclick=()=>{catalog=null;choose(elements.searchInput.value);};
+  elements.searchForm.onsubmit=event=>{event.preventDefault();choose(elements.searchInput.value);};
+  new ResizeObserver(()=>{const stage=elements.view.parentElement,w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}).observe(elements.view.parentElement);
+  function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);}animate();
+  const initial=new URLSearchParams(location.search).get('q')||'';
+  if(initial)choose(initial);else choose('');
+</script>
+</body>
+</html>
